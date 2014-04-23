@@ -1,0 +1,57 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler"
+         xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <!-- Element values are taken from http://docs.testfairy.com/Upload_API.html -->
+    <f:section title="Required Parameters">
+        <f:entry title="TestFairy API URL" field="apiUrl">
+            <f:textbox default="https://app.testfairy.com/api/upload/" />
+        </f:entry>
+
+        <f:entry title="TestFairy API key" field="apiKey">
+            <f:textbox />
+        </f:entry>
+
+        <f:entry title="APK file path" field="apkFilePath">
+            <f:textbox/>
+        </f:entry>
+    </f:section>
+    <f:advanced>
+            <f:entry title="Proguard file path" field="proguardFilePath">
+                <f:textbox/>
+            </f:entry>
+
+            <f:entry title="Testers groups" field="testersGroups">
+                <f:textbox/>
+            </f:entry>
+
+            <f:entry title="Metrics" field="metrics">
+                <f:enumSet />
+            </f:entry>
+
+            <f:entry title="Maximum session recording length" field="maxDuration">
+                <f:textbox default="10m"/>
+            </f:entry>
+
+            <f:entry title="Icon watermark" field="iconWatermark">
+                <f:checkbox  title="On"/>
+            </f:entry>
+
+            <f:entry title="Comment" field="comment">
+                <f:textarea />
+            </f:entry>
+
+            <f:section title="Video Settings">
+                    <f:entry title="Video recording settings" field="video">
+                        <f:select />
+                    </f:entry>
+
+                    <f:entry title="Video quality settings" field="videoQuality">
+                        <f:select />
+                    </f:entry>
+
+                    <f:entry title="Video rate recording (in frames per second)" field="videoRate">
+                        <f:textbox default="1.0"/>
+                    </f:entry>
+             </f:section>
+    </f:advanced>
+</j:jelly>
