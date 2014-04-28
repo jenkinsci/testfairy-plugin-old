@@ -6,6 +6,7 @@ import java.io.PrintStream;
 
 public class ConsoleLogger {
 
+
     private PrintStream logger;
 
     public ConsoleLogger(PrintStream logger) {
