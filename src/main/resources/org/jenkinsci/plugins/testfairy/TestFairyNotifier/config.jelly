@@ -40,6 +40,10 @@
                 <f:textarea />
             </f:entry>
 
+            <f:entry title="Append Changelog to comment" field="appendChangelog">
+                <f:checkbox />
+            </f:entry>
+
             <f:section title="Video Settings">
                     <f:entry title="Video recording settings" field="video">
                         <f:select />

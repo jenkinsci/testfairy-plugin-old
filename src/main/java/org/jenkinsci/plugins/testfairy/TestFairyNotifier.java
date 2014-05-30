@@ -10,6 +10,7 @@ import hudson.tasks.*;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.testfairy.api.APIConnector;
+import hudson.scm.ChangeLogSet;
 import org.jenkinsci.plugins.testfairy.api.APIException;
 import org.jenkinsci.plugins.testfairy.api.APIParams;
 import org.jenkinsci.plugins.testfairy.api.APIResponse;
@@ -24,6 +25,9 @@ public class TestFairyNotifier extends Notifier {
 
     private APIParams apiParams;
     private APIConnector connector;
+
+    private String comment;
+    private Boolean appendChangelog;
 
     @Override
     public DescriptorImpl getDescriptor() {
@@ -95,11 +99,14 @@ public class TestFairyNotifier extends Notifier {
                              String proguardFilePath,
                              String testersGroups, EnumSet<Metric> metrics, String maxDuration,
                              String video, String videoQuality, String videoRate,
-                             boolean iconWatermark, String comment) {
+                             boolean iconWatermark, String comment, Boolean appendChangelog) {
 
         this.apiParams = new APIParams(apiUrl, apiKey, apkFilePath, proguardFilePath,
                 testersGroups, UI2APIParamsConverter.metricsEnumSetToCSVString(metrics), maxDuration, video, videoQuality, videoRate,
-                UI2APIParamsConverter.iconWatermarkBooleanToString(iconWatermark), comment);
+                UI2APIParamsConverter.iconWatermarkBooleanToString(iconWatermark), "");
+
+        this.comment = comment;
+        this.appendChangelog = appendChangelog;
 
         this.connector = new APIConnector(this.apiParams);
     }
@@ -114,6 +121,7 @@ public class TestFairyNotifier extends Notifier {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
             apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
+            apiParams.setComment(createAPKComment(build));
 
             APIResponse response = connector.uploadAPK();
 
@@ -185,7 +193,19 @@ public class TestFairyNotifier extends Notifier {
     }
 
     public String getComment() {
-        return apiParams.getComment();
+        return comment;
+    }
+
+    public Boolean getAppendChangelog() {
+        return appendChangelog;
+    }
+
+    private String createAPKComment(AbstractBuild<?, ?> build) {
+        if (appendChangelog != null && appendChangelog) {
+            return getChangeLog(getComment(), build.getChangeSet());
+        } else {
+            return getComment();
+        }
     }
 
     private String getRemoteWorkspacePath(AbstractBuild<?, ?> build, ConsoleLogger logger) {
@@ -201,5 +221,25 @@ public class TestFairyNotifier extends Notifier {
             }
         }
         return path;
+    }
+
+
+    private String getChangeLog(String title, ChangeLogSet<?> changeSet) {
+        long lineNumber = 0;
+        StringBuilder builder = new StringBuilder(title);
+        builder.append("\n\n");
+        if (changeSet.isEmptySet()) {
+            return builder.append(Messages.TestFairyNotifier_NoChanges()).toString();
+        } else {
+            builder.append(Messages.TestFairyNotifier_NewChanges()).append('\n');
+            for (ChangeLogSet.Entry change : changeSet) {
+                builder.append(++lineNumber).append(". ")
+                        .append(change.getAuthor().getDisplayName())
+                        .append(" - ")
+                        .append(change.getMsg())
+                        .append('\n');
+            }
+            return builder.toString();
+        }
     }
 }
