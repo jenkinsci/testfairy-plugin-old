@@ -1,12 +1,13 @@
 package org.jenkinsci.plugins.testfairy.api;
 
 import java.io.File;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-public class APIParams {
+public class APIParams implements Serializable {
     public static final String DEFAULT_TEST_FAIRY_API_URL = "https://app.testfairy.com/api/upload/";
 
     private String apiUrl;

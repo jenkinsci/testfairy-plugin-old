@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-public class APIResponse {
+import java.io.Serializable;
+
+public class APIResponse implements Serializable {
 
     public static final String TEST_FAIRY_ERROR_CODE_MISSING_PARAMETER = "1";
     public static final String TEST_FAIRY_ERROR_CODE_INVALID_API_KEY = "5";
