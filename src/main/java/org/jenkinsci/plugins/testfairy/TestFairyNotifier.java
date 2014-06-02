@@ -19,12 +19,12 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import hudson.remoting.Callable;
 
 
 public class TestFairyNotifier extends Notifier {
 
     private APIParams apiParams;
-    private APIConnector connector;
 
     private String comment;
     private Boolean appendChangelog;
@@ -107,8 +107,6 @@ public class TestFairyNotifier extends Notifier {
 
         this.comment = comment;
         this.appendChangelog = appendChangelog;
-
-        this.connector = new APIConnector(this.apiParams);
     }
 
     @Override
@@ -120,10 +118,11 @@ public class TestFairyNotifier extends Notifier {
         try {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
-            apiParams.setComment(createAPKComment(build));
-
-            APIResponse response = connector.uploadAPK();
+            apiParams.setComment(createAPKComment(build, apiParams.getComment(), appendChangelog));
+            String workspace = getRemoteWorkspacePath(build, logger);
+            logger.warn("Workspace is " + workspace);
+            Uploader uploader = new Uploader(apiParams, workspace);
+            APIResponse response = launcher.getChannel().call(uploader);
 
             logger.logResponse(response);
 
@@ -136,7 +135,29 @@ public class TestFairyNotifier extends Notifier {
 
             //Do NOT continue build
             return false;
+        } catch (Exception e) {
+            logger.error("Internal error: " + e.getClass().getCanonicalName() + " (" + e.getMessage() + ")\n" +
+                    stackTraceToString(e.getStackTrace()));
+
+            //Do NOT continue build
+            return false;
         }
+    }
+
+    private static String stackTraceToString(StackTraceElement[] stackTrace) {
+        StringBuilder builder = new StringBuilder();
+        for (StackTraceElement element : stackTrace) {
+            builder.append(element.getClassName())
+                   .append(':')
+                   .append(element.getMethodName())
+                   .append('(')
+                   .append(element.getFileName())
+                   .append(':')
+                   .append(element.getLineNumber())
+                   .append(")")
+                   .append("\n");
+        }
+        return builder.toString();
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
@@ -200,11 +221,11 @@ public class TestFairyNotifier extends Notifier {
         return appendChangelog;
     }
 
-    private String createAPKComment(AbstractBuild<?, ?> build) {
+    private static String createAPKComment(AbstractBuild<?, ?> build, String comment, Boolean appendChangelog) {
         if (appendChangelog != null && appendChangelog) {
-            return getChangeLog(getComment(), build.getChangeSet());
+            return getChangeLog(comment, build.getChangeSet());
         } else {
-            return getComment();
+            return comment;
         }
     }
 
@@ -224,7 +245,7 @@ public class TestFairyNotifier extends Notifier {
     }
 
 
-    private String getChangeLog(String title, ChangeLogSet<?> changeSet) {
+    private  static String getChangeLog(String title, ChangeLogSet<?> changeSet) {
         long lineNumber = 0;
         StringBuilder builder = new StringBuilder(title);
         builder.append("\n\n");
@@ -240,6 +261,24 @@ public class TestFairyNotifier extends Notifier {
                         .append('\n');
             }
             return builder.toString();
+        }
+    }
+
+
+    private static class Uploader extends APIConnector implements Callable<APIResponse, APIException> {
+        private APIParams apiParams;
+        private String workspace;
+
+        public Uploader(APIParams apiParams, String workspace) throws APIException {
+            super();
+            this.apiParams = apiParams;
+            this.workspace = workspace;
+        }
+
+        @Override
+        public APIResponse call() throws APIException {
+            apiParams.initializeAndValidate(workspace);
+            return sendUploadRequest(apiParams);
         }
     }
 }
