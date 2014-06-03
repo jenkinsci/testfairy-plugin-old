@@ -118,7 +118,7 @@ public class TestFairyNotifier extends Notifier {
         try {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.setComment(createAPKComment(build, apiParams.getComment(), appendChangelog));
+            apiParams.setComment(createAPKComment(build, comment, appendChangelog));
             String workspace = getRemoteWorkspacePath(build, logger);
             logger.warn("Workspace is " + workspace);
             Uploader uploader = new Uploader(apiParams, workspace);
@@ -141,6 +141,8 @@ public class TestFairyNotifier extends Notifier {
 
             //Do NOT continue build
             return false;
+        } finally {
+            apiParams.setComment("");
         }
     }
 
