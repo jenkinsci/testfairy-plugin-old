@@ -10,6 +10,7 @@ import hudson.tasks.*;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.testfairy.api.APIConnector;
+import hudson.scm.ChangeLogSet;
 import org.jenkinsci.plugins.testfairy.api.APIException;
 import org.jenkinsci.plugins.testfairy.api.APIParams;
 import org.jenkinsci.plugins.testfairy.api.APIResponse;
@@ -18,12 +19,15 @@ import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import hudson.remoting.Callable;
 
 
 public class TestFairyNotifier extends Notifier {
 
     private APIParams apiParams;
-    private APIConnector connector;
+
+    private String comment;
+    private Boolean appendChangelog;
 
     @Override
     public DescriptorImpl getDescriptor() {
@@ -95,13 +99,14 @@ public class TestFairyNotifier extends Notifier {
                              String proguardFilePath,
                              String testersGroups, EnumSet<Metric> metrics, String maxDuration,
                              String video, String videoQuality, String videoRate,
-                             boolean iconWatermark, String comment) {
+                             boolean iconWatermark, String comment, Boolean appendChangelog) {
 
         this.apiParams = new APIParams(apiUrl, apiKey, apkFilePath, proguardFilePath,
                 testersGroups, UI2APIParamsConverter.metricsEnumSetToCSVString(metrics), maxDuration, video, videoQuality, videoRate,
-                UI2APIParamsConverter.iconWatermarkBooleanToString(iconWatermark), comment);
+                UI2APIParamsConverter.iconWatermarkBooleanToString(iconWatermark), "");
 
-        this.connector = new APIConnector(this.apiParams);
+        this.comment = comment;
+        this.appendChangelog = appendChangelog;
     }
 
     @Override
@@ -113,9 +118,11 @@ public class TestFairyNotifier extends Notifier {
         try {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
-
-            APIResponse response = connector.uploadAPK();
+            apiParams.setComment(createAPKComment(build, comment, appendChangelog));
+            String workspace = getRemoteWorkspacePath(build, logger);
+            logger.warn("Workspace is " + workspace);
+            Uploader uploader = new Uploader(apiParams, workspace);
+            APIResponse response = launcher.getChannel().call(uploader);
 
             logger.logResponse(response);
 
@@ -128,7 +135,31 @@ public class TestFairyNotifier extends Notifier {
 
             //Do NOT continue build
             return false;
+        } catch (Exception e) {
+            logger.error("Internal error: " + e.getClass().getCanonicalName() + " (" + e.getMessage() + ")\n" +
+                    stackTraceToString(e.getStackTrace()));
+
+            //Do NOT continue build
+            return false;
+        } finally {
+            apiParams.setComment("");
         }
+    }
+
+    private static String stackTraceToString(StackTraceElement[] stackTrace) {
+        StringBuilder builder = new StringBuilder();
+        for (StackTraceElement element : stackTrace) {
+            builder.append(element.getClassName())
+                   .append(':')
+                   .append(element.getMethodName())
+                   .append('(')
+                   .append(element.getFileName())
+                   .append(':')
+                   .append(element.getLineNumber())
+                   .append(")")
+                   .append("\n");
+        }
+        return builder.toString();
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
@@ -185,7 +216,19 @@ public class TestFairyNotifier extends Notifier {
     }
 
     public String getComment() {
-        return apiParams.getComment();
+        return comment;
+    }
+
+    public Boolean getAppendChangelog() {
+        return appendChangelog;
+    }
+
+    private static String createAPKComment(AbstractBuild<?, ?> build, String comment, Boolean appendChangelog) {
+        if (appendChangelog != null && appendChangelog) {
+            return getChangeLog(comment, build.getChangeSet());
+        } else {
+            return comment;
+        }
     }
 
     private String getRemoteWorkspacePath(AbstractBuild<?, ?> build, ConsoleLogger logger) {
@@ -201,5 +244,43 @@ public class TestFairyNotifier extends Notifier {
             }
         }
         return path;
+    }
+
+
+    private  static String getChangeLog(String title, ChangeLogSet<?> changeSet) {
+        long lineNumber = 0;
+        StringBuilder builder = new StringBuilder(title);
+        builder.append("\n\n");
+        if (changeSet.isEmptySet()) {
+            return builder.append(Messages.TestFairyNotifier_NoChanges()).toString();
+        } else {
+            builder.append(Messages.TestFairyNotifier_NewChanges()).append('\n');
+            for (ChangeLogSet.Entry change : changeSet) {
+                builder.append(++lineNumber).append(". ")
+                        .append(change.getAuthor().getDisplayName())
+                        .append(" - ")
+                        .append(change.getMsg())
+                        .append('\n');
+            }
+            return builder.toString();
+        }
+    }
+
+
+    private static class Uploader extends APIConnector implements Callable<APIResponse, APIException> {
+        private APIParams apiParams;
+        private String workspace;
+
+        public Uploader(APIParams apiParams, String workspace) throws APIException {
+            super();
+            this.apiParams = apiParams;
+            this.workspace = workspace;
+        }
+
+        @Override
+        public APIResponse call() throws APIException {
+            apiParams.initializeAndValidate(workspace);
+            return sendUploadRequest(apiParams);
+        }
     }
 }

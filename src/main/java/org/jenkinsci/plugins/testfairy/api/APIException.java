@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-public class APIException extends Exception {
+import java.io.Serializable;
+
+public class APIException extends Exception implements Serializable {
 
     public APIException(String s) {
         super(s);
