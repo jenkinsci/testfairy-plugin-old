@@ -3,16 +3,25 @@ package org.jenkinsci.plugins.testfairy.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import hudson.ProxyConfiguration;
+import jenkins.model.Jenkins;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
 import java.io.*;
+import java.util.regex.Pattern;
 
 import static org.jenkinsci.plugins.testfairy.api.APIConstants.*;
 
@@ -54,7 +63,33 @@ public class APIConnector {
 
             httpPost.setEntity(buildMultipartRequest());
 
-            CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+            CloseableHttpClient httpClient;
+            ProxyConfiguration proxy = Jenkins.getInstance().proxy;
+            if (shouldUseProxy(proxy, apiParams.getApiURI().getHost())) {
+
+                HttpHost proxyHost = new HttpHost(proxy.name, proxy.port);
+                RequestConfig config = RequestConfig.custom()
+                        .setProxy(proxyHost)
+                        .build();
+                httpPost.setConfig(config);
+
+                if(proxy.getUserName() != null) {
+                    CredentialsProvider credsProvider = new BasicCredentialsProvider();
+                    credsProvider.setCredentials(
+                            new AuthScope(proxy.getUserName(), proxy.port),
+                            new UsernamePasswordCredentials(proxy.getUserName(), proxy.getPassword()));
+
+                    httpClient = HttpClientBuilder.create()
+                            .setDefaultCredentialsProvider(credsProvider).build();
+                } else {
+                    httpClient = HttpClientBuilder.create().build();
+                }
+
+            } else {
+
+                httpClient = HttpClientBuilder.create().build();
+
+            }
 
             HttpResponse response = httpClient.execute(httpPost);
 
@@ -69,6 +104,20 @@ public class APIConnector {
         return apiResponse;
     }
 
+    private Boolean shouldUseProxy(ProxyConfiguration proxy, String hostname) {
+        if(proxy == null) {
+            return false;
+        }
+        boolean shouldProxy = true;
+        for(Pattern p : proxy.getNoProxyHostPatterns()) {
+            if(p.matcher(hostname).matches()) {
+                shouldProxy = false;
+                break;
+            }
+        }
+
+        return shouldProxy;
+    }
     /**
      * Builds the http multipart request to be sent to the TestFairy API
      * @return
