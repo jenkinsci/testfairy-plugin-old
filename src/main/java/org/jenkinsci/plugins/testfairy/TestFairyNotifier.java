@@ -3,12 +3,14 @@ package org.jenkinsci.plugins.testfairy;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.tasks.*;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import org.apache.tools.ant.types.FileSet;
 import org.jenkinsci.plugins.testfairy.api.APIConnector;
 import org.jenkinsci.plugins.testfairy.api.APIException;
 import org.jenkinsci.plugins.testfairy.api.APIParams;
@@ -16,8 +18,10 @@ import org.jenkinsci.plugins.testfairy.api.APIResponse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 
 public class TestFairyNotifier extends Notifier {
@@ -111,17 +115,27 @@ public class TestFairyNotifier extends Notifier {
 
 
         try {
-            logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
+            FileSet fileSet = Util.createFileSet(new File(getRemoteWorkspacePath(build, logger)), apiParams.getApkFilePath(), null);
+            Iterator it = fileSet.iterator();
+            while (it.hasNext()) {
+                String apkPath = it.next().toString();
+                apiParams.setApkFilePath(apkPath);
+                logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            APIResponse response = connector.uploadAPK();
+                apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
 
-            logger.logResponse(response);
+                APIResponse response = connector.uploadAPK();
 
-            //Continue only if status was ok
-            return APIResponse.TEST_FAIRY_STATUS_OK.equals(response.getStatus());
+                logger.logResponse(response);
 
+                //Continue only if status was ok
+                if(!APIResponse.TEST_FAIRY_STATUS_OK.equals(response.getStatus())) {
+                    return false;
+                }
+            }
+
+            return true;
         } catch (APIException e) {
 
             logger.error("Upload failed: " + e.getMessage());
