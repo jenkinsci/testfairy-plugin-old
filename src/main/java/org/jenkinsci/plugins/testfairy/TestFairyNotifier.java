@@ -114,9 +114,10 @@ public class TestFairyNotifier extends Notifier {
         ConsoleLogger logger =  new ConsoleLogger(listener.getLogger());
 
 
+        String apkFilePath = apiParams.getApkFilePath();
         try {
 
-            FileSet fileSet = Util.createFileSet(new File(getRemoteWorkspacePath(build, logger)), apiParams.getApkFilePath(), null);
+            FileSet fileSet = Util.createFileSet(new File(getRemoteWorkspacePath(build, logger)), apkFilePath, null);
             Iterator it = fileSet.iterator();
             while (it.hasNext()) {
                 String apkPath = it.next().toString();
@@ -142,6 +143,8 @@ public class TestFairyNotifier extends Notifier {
 
             //Do NOT continue build
             return false;
+        } finally {
+            apiParams.setApkFilePath(apkFilePath);
         }
     }
 
