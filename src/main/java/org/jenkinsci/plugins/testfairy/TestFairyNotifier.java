@@ -113,16 +113,16 @@ public class TestFairyNotifier extends Notifier {
         try {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
+            apiParams.validate(build.getWorkspace());
 
-            APIResponse response = connector.uploadAPK();
+            APIResponse response = build.getWorkspace().act(connector);
 
             logger.logResponse(response);
 
             //Continue only if status was ok
             return APIResponse.TEST_FAIRY_STATUS_OK.equals(response.getStatus());
 
-        } catch (APIException e) {
+        } catch (Exception e) {
 
             logger.error("Upload failed: " + e.getMessage());
 
@@ -188,18 +188,4 @@ public class TestFairyNotifier extends Notifier {
         return apiParams.getComment();
     }
 
-    private String getRemoteWorkspacePath(AbstractBuild<?, ?> build, ConsoleLogger logger) {
-        FilePath workspace = build.getWorkspace();
-        String path = "";
-        if (workspace != null) {
-            try {
-                path = workspace.toURI().getPath();
-            } catch (IOException e) {
-                logger.warn("Could not retrive build workspace");
-            } catch (InterruptedException e) {
-                logger.warn("Could not retrive build workspace");
-            }
-        }
-        return path;
-    }
 }

@@ -1,8 +1,12 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-public class APIResponse {
+import java.io.Serializable;
 
-    public static final String TEST_FAIRY_ERROR_CODE_MISSING_PARAMETER = "1";
+public class APIResponse implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	public static final String TEST_FAIRY_ERROR_CODE_MISSING_PARAMETER = "1";
     public static final String TEST_FAIRY_ERROR_CODE_INVALID_API_KEY = "5";
     public static final String TEST_FAIRY_ERROR_CODE_INVALID_APK_FILE = "105";
     public static final String TEST_FAIRY_STATUS_OK = "ok";
