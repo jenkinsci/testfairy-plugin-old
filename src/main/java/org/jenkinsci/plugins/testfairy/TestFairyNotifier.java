@@ -9,14 +9,13 @@ import hudson.model.BuildListener;
 import hudson.tasks.*;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+
 import org.jenkinsci.plugins.testfairy.api.APIConnector;
-import org.jenkinsci.plugins.testfairy.api.APIException;
 import org.jenkinsci.plugins.testfairy.api.APIParams;
 import org.jenkinsci.plugins.testfairy.api.APIResponse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import java.io.IOException;
 import java.util.EnumSet;
 
 
@@ -113,8 +112,7 @@ public class TestFairyNotifier extends Notifier {
         try {
             logger.info("Uploading APK " + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            FilePath apk = apiParams.validate(build.getWorkspace());
-
+            FilePath apk = apiParams.initializeAndValidate(build.getWorkspace(), build.getBuildVariableResolver());
             APIResponse response = apk.act(connector);
 
             logger.logResponse(response);

@@ -1,6 +1,8 @@
 package org.jenkinsci.plugins.testfairy.api;
 
+import hudson.Util;
 import hudson.FilePath;
+import hudson.util.VariableResolver;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,25 +55,36 @@ public class APIParams implements Serializable {
     }
 
 
-    public FilePath validate(FilePath remoteWorkspacePath) throws
+    public FilePath initializeAndValidate(FilePath remoteWorkspacePath, VariableResolver<String> resolver) throws
             APIException {
 
         checkNotMissing(apiUrl, "API Url");
 
         try {
-            apiURI = new URL(apiUrl).toURI();
+            apiURI = new URL(Util.replaceMacro(apiUrl, resolver)).toURI();
         } catch (URISyntaxException e) {
             throw new APIException("Invalid API Url " + apiUrl, e);
         } catch (MalformedURLException e) {
             throw new APIException("Invalid API Url " + apiUrl, e);
         }
-
-        checkNotMissing(apiKey, "API Key");
-
-        checkNotMissing(apkFilePath, "APK File Path");
         
-        FilePath apk = findPath(remoteWorkspacePath, apkFilePath, "APK");
+        apiKey        = Util.replaceMacro(apiKey, resolver);
+        apkFilePath   = Util.replaceMacro(apkFilePath, resolver);
+        proguardFilePath = Util.replaceMacro(proguardFilePath, resolver);
+        testersGroups = Util.replaceMacro(testersGroups, resolver);
+        metrics       = Util.replaceMacro(metrics, resolver);
+        maxDuration   = Util.replaceMacro(maxDuration, resolver);
+        video         = Util.replaceMacro(video, resolver);
+        videoQuality  = Util.replaceMacro(videoQuality, resolver);
+        videoRate     = Util.replaceMacro(videoRate, resolver);
+        iconWatermark = Util.replaceMacro(iconWatermark, resolver);
+        comment       = Util.replaceMacro(comment, resolver);
+        
+        checkNotMissing(apiKey, "API Key");
+        checkNotMissing(apkFilePath, "APK File Path");
 
+		FilePath apk = findPath(remoteWorkspacePath, apkFilePath, "APK");
+		
         if (apk == null) {
             throw new APIException("APK File " + apkFilePath + " does not exist");
         }
