@@ -6,6 +6,7 @@ import hudson.remoting.VirtualChannel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -28,10 +29,6 @@ public class APIConnector implements FilePath.FileCallable<APIResponse> {
     public APIConnector(APIParams apiParams) {
         this.apiParams = apiParams;
 
-        //JAVA 7 issue handled for SSL Handshake
-        //http://stackoverflow.com/questions/7615645/ssl-handshake-alert-unrecognized-name-error-since-upgrade-to-java-1-7-0
-        System.setProperty("jsse.enableSNIExtension", "false");
-
         //initialize jackson object mapper
         mapper = new ObjectMapper();
         mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
@@ -44,6 +41,10 @@ public class APIConnector implements FilePath.FileCallable<APIResponse> {
 	 * @throws IOException
 	 */
 	APIResponse sendUploadRequest(String workspacePath) throws IOException {
+        //JAVA 7 issue handled for SSL Handshake
+        //http://stackoverflow.com/questions/7615645/ssl-handshake-alert-unrecognized-name-error-since-upgrade-to-java-1-7-0
+        System.setProperty("jsse.enableSNIExtension", "false");
+        
 		HttpPost httpPost = new HttpPost(apiParams.getApiURI());
 
 		httpPost.setEntity(buildMultipartRequest(workspacePath));
@@ -100,14 +101,14 @@ public class APIConnector implements FilePath.FileCallable<APIResponse> {
 
     private void addFilePartIfNotEmpty(MultipartEntityBuilder entityBuilder,
                                        String requestParam, File file){
-        if (file != null) {
+        if (file != null && file.exists()) {
             entityBuilder.addPart(requestParam, new FileBody(file));
         }
     }
 
     private void addTextBodyIfNotEmpty(MultipartEntityBuilder entityBuilder,
                                        String requestParam, String value){
-        if(value!=null && !"".equals(value)) {
+        if(!StringUtils.isBlank(value)) {
             entityBuilder.addTextBody(requestParam, value);
         }
     }

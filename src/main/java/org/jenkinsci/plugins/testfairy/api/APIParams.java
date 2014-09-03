@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.testfairy.api;
 
 import hudson.FilePath;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.MalformedURLException;
@@ -52,7 +53,7 @@ public class APIParams implements Serializable {
     }
 
 
-    public void validate(FilePath remoteWorkspacePath) throws
+    public FilePath validate(FilePath remoteWorkspacePath) throws
             APIException {
 
         checkNotMissing(apiUrl, "API Url");
@@ -68,14 +69,18 @@ public class APIParams implements Serializable {
         checkNotMissing(apiKey, "API Key");
 
         checkNotMissing(apkFilePath, "APK File Path");
+        
+        FilePath apk = findPath(remoteWorkspacePath, apkFilePath, "APK");
 
-        if (!findPath(remoteWorkspacePath, apkFilePath, "APK")) {
+        if (apk == null) {
             throw new APIException("APK File " + apkFilePath + " does not exist");
         }
 
-        if (!(StringUtils.isBlank(proguardFilePath) || findPath(remoteWorkspacePath, proguardFilePath, "Proguard"))) {
+        if (!(StringUtils.isBlank(proguardFilePath) || findPath(remoteWorkspacePath, proguardFilePath, "Proguard") != null)) {
             throw new APIException("Proguard File " + apkFilePath + " does not exist");
         }
+        
+        return apk;
     }
 
     public URI getApiURI(){
@@ -186,9 +191,13 @@ public class APIParams implements Serializable {
         }
     }
 
-    public Boolean findPath(FilePath workspace, String path, String ctx) throws APIException {
+    public FilePath findPath(FilePath workspace, String path, String ctx) throws APIException {
         try {
-		return new FilePath(workspace, path).exists();
+        	FilePath fp = new FilePath(workspace, path);
+        	if (fp.exists()) return fp;
+        	else fp = new FilePath(new File(path));
+        	if (fp.exists()) return fp;
+        	else return null;
 		} catch (IOException e) {
 			throw new APIException("Error finding " + ctx + " file at" + path, e);
 		} catch (InterruptedException e) {

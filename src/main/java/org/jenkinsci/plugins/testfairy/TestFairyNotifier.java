@@ -111,11 +111,11 @@ public class TestFairyNotifier extends Notifier {
 
 
         try {
-            logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
+            logger.info("Uploading APK " + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.validate(build.getWorkspace());
+            FilePath apk = apiParams.validate(build.getWorkspace());
 
-            APIResponse response = build.getWorkspace().act(connector);
+            APIResponse response = apk.act(connector);
 
             logger.logResponse(response);
 
@@ -125,6 +125,8 @@ public class TestFairyNotifier extends Notifier {
         } catch (Exception e) {
 
             logger.error("Upload failed: " + e.getMessage());
+            Throwable e2 = e.getCause();
+            if (e2 != null) logger.error("Original cuase: " + e2.getMessage());
 
             //Do NOT continue build
             return false;
