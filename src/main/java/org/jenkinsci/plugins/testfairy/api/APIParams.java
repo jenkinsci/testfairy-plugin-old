@@ -1,12 +1,18 @@
 package org.jenkinsci.plugins.testfairy.api;
 
+import hudson.FilePath;
+
 import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-public class APIParams {
+import org.apache.commons.lang.StringUtils;
+
+public class APIParams implements Serializable {
     public static final String DEFAULT_TEST_FAIRY_API_URL = "https://app.testfairy.com/api/upload/";
 
     private String apiUrl;
@@ -28,8 +34,6 @@ public class APIParams {
 
     //processed params
     private URI apiURI;
-    private File apkFile;
-    private File proguardFile;
 
     public APIParams(String apiUrl, String apiKey, String apkFilePath, String proguardFilePath,
                      String testersGroups, String metrics, String maxDuration, String video,
@@ -49,7 +53,7 @@ public class APIParams {
     }
 
 
-    public void initializeAndValidate(String remoteWorkspacePath) throws
+    public FilePath validate(FilePath remoteWorkspacePath) throws
             APIException {
 
         checkNotMissing(apiUrl, "API Url");
@@ -65,25 +69,23 @@ public class APIParams {
         checkNotMissing(apiKey, "API Key");
 
         checkNotMissing(apkFilePath, "APK File Path");
+        
+        FilePath apk = findPath(remoteWorkspacePath, apkFilePath, "APK");
 
-        apkFile = createFile(remoteWorkspacePath, apkFilePath, "APK");
-        if (proguardFilePath!=null && !"".equals(proguardFilePath)) {
-            proguardFile = createFile(remoteWorkspacePath, proguardFilePath, "Proguard");
+        if (apk == null) {
+            throw new APIException("APK File " + apkFilePath + " does not exist");
         }
+
+        if (!(StringUtils.isBlank(proguardFilePath) || findPath(remoteWorkspacePath, proguardFilePath, "Proguard") != null)) {
+            throw new APIException("Proguard File " + apkFilePath + " does not exist");
+        }
+        
+        return apk;
     }
 
     public URI getApiURI(){
         return apiURI;
     }
-
-    public File getApkFile(){
-        return apkFile;
-    }
-
-    public File getProguardFile(){
-        return proguardFile;
-    }
-
 
     public String getApiUrl() {
         return apiUrl;
@@ -184,29 +186,23 @@ public class APIParams {
 
     private static void checkNotMissing(String param, String logName) throws APIException {
 
-        if(param == null || "".equals(param)){
+        if(StringUtils.isBlank(param)) {
             throw new APIException("Missing " + logName);
         }
     }
 
-    private File createFile(String remoteWorkspacePath, String filePath, String fileContext)
-            throws APIException {
-        File file = findAbsoluteOrRelativeFile(remoteWorkspacePath, filePath);
-        if (file == null || !file.isFile()) {
-            throw new APIException("Invalid " + fileContext + " File Path: " + filePath);
-        }
-        return file;
+    public FilePath findPath(FilePath workspace, String path, String ctx) throws APIException {
+        try {
+        	FilePath fp = new FilePath(workspace, path);
+        	if (fp.exists()) return fp;
+        	else fp = new FilePath(new File(path));
+        	if (fp.exists()) return fp;
+        	else return null;
+		} catch (IOException e) {
+			throw new APIException("Error finding " + ctx + " file at" + path, e);
+		} catch (InterruptedException e) {
+			throw new APIException("Error finding " + ctx + " file at" + path, e);
+		}
     }
 
-    private File findAbsoluteOrRelativeFile(String workspace, String path) {
-        File f = new File(path);
-        if (f.exists()) {
-            return f;
-        }
-        f = new File(workspace, path);
-        if (f.exists()) {
-            return f;
-        }
-        return null;
-    }
 }
