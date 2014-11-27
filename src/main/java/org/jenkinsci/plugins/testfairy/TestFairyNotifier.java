@@ -119,8 +119,7 @@ public class TestFairyNotifier extends Notifier {
             } catch (Exception e) {
                 // do nothing if exception caught
             }
-            logger.info("getRemoteWorkspacePath :" + getRemoteWorkspacePath(build, logger));
-
+            
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
             apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
