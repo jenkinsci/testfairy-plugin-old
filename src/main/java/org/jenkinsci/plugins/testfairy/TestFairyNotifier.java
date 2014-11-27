@@ -122,7 +122,7 @@ public class TestFairyNotifier extends Notifier {
             
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
+            apiParams.initializeAndValidate(build.getWorkspace());
 
             APIResponse response = connector.uploadAPK();
 
@@ -131,7 +131,7 @@ public class TestFairyNotifier extends Notifier {
             //Continue only if status was ok
             return APIResponse.TEST_FAIRY_STATUS_OK.equals(response.getStatus());
 
-        } catch (APIException e) {
+        } catch (Exception e) {
 
             logger.error("Upload failed: " + e.getMessage());
 
