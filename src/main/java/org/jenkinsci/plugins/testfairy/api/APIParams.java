@@ -1,6 +1,6 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-import java.io.File;
+import hudson.FilePath;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,8 +28,8 @@ public class APIParams {
 
     //processed params
     private URI apiURI;
-    private File apkFile;
-    private File proguardFile;
+    private FilePath apkFile;
+    private FilePath proguardFile;
 
     public APIParams(String apiUrl, String apiKey, String apkFilePath, String proguardFilePath,
                      String testersGroups, String metrics, String maxDuration, String video,
@@ -49,8 +49,8 @@ public class APIParams {
     }
 
 
-    public void initializeAndValidate(String remoteWorkspacePath) throws
-            APIException {
+    public void initializeAndValidate(FilePath remoteWorkspacePath) throws
+            APIException, java.io.IOException, java.lang.InterruptedException {
 
         checkNotMissing(apiUrl, "API Url");
 
@@ -76,11 +76,11 @@ public class APIParams {
         return apiURI;
     }
 
-    public File getApkFile(){
+    public FilePath getApkFile(){
         return apkFile;
     }
 
-    public File getProguardFile(){
+    public FilePath getProguardFile(){
         return proguardFile;
     }
 
@@ -189,24 +189,12 @@ public class APIParams {
         }
     }
 
-    private File createFile(String remoteWorkspacePath, String filePath, String fileContext)
-            throws APIException {
-        File file = findAbsoluteOrRelativeFile(remoteWorkspacePath, filePath);
-        if (file == null || !file.isFile()) {
+    private FilePath createFile(FilePath remoteWorkspacePath, String filePath, String fileContext)
+            throws APIException, java.io.IOException, java.lang.InterruptedException {
+        FilePath file = new FilePath(remoteWorkspacePath, filePath);
+        if (file == null || file.isDirectory()) {
             throw new APIException("Invalid " + fileContext + " File Path: " + filePath);
         }
         return file;
-    }
-
-    private File findAbsoluteOrRelativeFile(String workspace, String path) {
-        File f = new File(path);
-        if (f.exists()) {
-            return f;
-        }
-        f = new File(workspace, path);
-        if (f.exists()) {
-            return f;
-        }
-        return null;
     }
 }

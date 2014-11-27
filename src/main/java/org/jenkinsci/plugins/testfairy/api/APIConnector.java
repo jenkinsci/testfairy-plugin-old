@@ -1,14 +1,18 @@
 package org.jenkinsci.plugins.testfairy.api;
 
 
+import hudson.FilePath;
+import hudson.util.IOUtils;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import org.apache.commons.httpclient.methods.multipart.ByteArrayPartSource;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -73,7 +77,7 @@ public class APIConnector {
      * Builds the http multipart request to be sent to the TestFairy API
      * @return
      */
-    private HttpEntity buildMultipartRequest() {
+    private HttpEntity buildMultipartRequest() throws java.io.IOException {
 
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
 
@@ -110,9 +114,9 @@ public class APIConnector {
     }
 
     private void addFilePartIfNotEmpty(MultipartEntityBuilder entityBuilder,
-                                       String requestParam, File file){
+                                       String requestParam, FilePath file) throws java.io.IOException {
         if (file != null) {
-            entityBuilder.addPart(requestParam, new FileBody(file));
+            entityBuilder.addPart(requestParam, new ByteArrayBody(IOUtils.toByteArray(file.read()), file.getName()));
         }
     }
 
