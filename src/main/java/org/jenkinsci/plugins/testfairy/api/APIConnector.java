@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.testfairy.api;
 
 
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.util.IOUtils;
 
@@ -38,9 +39,9 @@ public class APIConnector {
     }
 
 
-    public APIResponse uploadAPK(FilePath remoteWorkspacePath) throws APIException {
+    public APIResponse uploadAPK(EnvVars environment, FilePath remoteWorkspacePath) throws APIException {
 
-        APIResponse apiResponse = sendUploadRequest(remoteWorkspacePath);
+        APIResponse apiResponse = sendUploadRequest(environment, remoteWorkspacePath);
 
         return apiResponse;
 
@@ -50,13 +51,13 @@ public class APIConnector {
      * Sends an upload request to the TestFairy API
      * @return
      */
-    APIResponse sendUploadRequest(FilePath remoteWorkspacePath) throws APIException {
+    APIResponse sendUploadRequest(EnvVars environment, FilePath remoteWorkspacePath) throws APIException {
         APIResponse apiResponse = null;
 
         try {
             HttpPost httpPost = new HttpPost(apiParams.getApiURI());
 
-            httpPost.setEntity(buildMultipartRequest(remoteWorkspacePath));
+            httpPost.setEntity(buildMultipartRequest(environment, remoteWorkspacePath));
 
             CloseableHttpClient httpClient = HttpClientBuilder.create().build();
 
@@ -79,7 +80,7 @@ public class APIConnector {
      * Builds the http multipart request to be sent to the TestFairy API
      * @return
      */
-    private HttpEntity buildMultipartRequest(FilePath remoteWorkspacePath) throws java.io.IOException, APIException, InterruptedException {
+    private HttpEntity buildMultipartRequest(EnvVars environment, FilePath remoteWorkspacePath) throws java.io.IOException, APIException, InterruptedException {
 
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
 
@@ -87,16 +88,16 @@ public class APIConnector {
          *   Set Required Params
          */
 
-        addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_KEY, apiParams.getApiKey());
+        addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_KEY, environment.expand(apiParams.getApiKey()));
 
-        addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_FILE, createFile(remoteWorkspacePath, apiParams.getApkFilePath(), "APK"));
+        addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_FILE, createFile(remoteWorkspacePath, environment.expand(apiParams.getApkFilePath()), "APK"));
 
         /*
          *   Set Optional Params
          */
-        String proguardFilePath = apiParams.getProguardFilePath();
+        String proguardFilePath = environment.expand(apiParams.getProguardFilePath());
         if (proguardFilePath!=null && !"".equals(proguardFilePath)) {
-            addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_PROGUARD_FILE,createFile(remoteWorkspacePath, proguardFilePath, "APK"));
+            addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_PROGUARD_FILE,createFile(remoteWorkspacePath, proguardFilePath, "PROGUARD"));
         }
 
         addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_TESTERS_GROUPS, apiParams.getTestersGroups());

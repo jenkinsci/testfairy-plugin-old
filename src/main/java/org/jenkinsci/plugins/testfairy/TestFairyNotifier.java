@@ -111,21 +111,11 @@ public class TestFairyNotifier extends Notifier {
         ConsoleLogger logger =  new ConsoleLogger(listener.getLogger());
 
         try {
-            try {
-                EnvVars environment = build.getEnvironment(listener);
-                // Apply environment variable if needed
-                apiParams.setApiKey(environment.expand(apiParams.getApiKey()));
-                apiParams.setApkFilePath(environment.expand(apiParams.getApkFilePath()));
-                apiParams.setProguardFilePath(environment.expand(apiParams.getProguardFilePath()));
-            } catch (Exception e) {
-                // do nothing if exception caught
-            }
-
-            logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
+            EnvVars environment = build.getEnvironment(listener);                
+            logger.info("Uploading APK :" + environment.expand(apiParams.getApkFilePath()) + " to TestFairy ...");
 
             apiParams.initializeAndValidate();
-
-            APIResponse response = connector.uploadAPK(build.getWorkspace());
+            APIResponse response = connector.uploadAPK(environment, build.getWorkspace());
 
             logger.logResponse(response);
 
