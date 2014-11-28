@@ -114,6 +114,7 @@ public class TestFairyNotifier extends Notifier {
             try {
                 EnvVars environment = build.getEnvironment(listener);
                 // Apply environment variable if needed
+                apiParams.setApiKey(environment.expand(apiParams.getApiKey()));
                 apiParams.setApkFilePath(environment.expand(apiParams.getApkFilePath()));
                 apiParams.setProguardFilePath(environment.expand(apiParams.getProguardFilePath()));
             } catch (Exception e) {
