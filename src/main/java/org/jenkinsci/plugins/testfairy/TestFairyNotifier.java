@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.testfairy;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -109,20 +110,29 @@ public class TestFairyNotifier extends Notifier {
 
         ConsoleLogger logger =  new ConsoleLogger(listener.getLogger());
 
-
         try {
+            try {
+                EnvVars environment = build.getEnvironment(listener);
+                // Apply environment variable if needed
+                apiParams.setApiKey(environment.expand(apiParams.getApiKey()));
+                apiParams.setApkFilePath(environment.expand(apiParams.getApkFilePath()));
+                apiParams.setProguardFilePath(environment.expand(apiParams.getProguardFilePath()));
+            } catch (Exception e) {
+                // do nothing if exception caught
+            }
+
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(getRemoteWorkspacePath(build, logger));
+            apiParams.initializeAndValidate();
 
-            APIResponse response = connector.uploadAPK();
+            APIResponse response = connector.uploadAPK(build.getWorkspace());
 
             logger.logResponse(response);
 
             //Continue only if status was ok
             return APIResponse.TEST_FAIRY_STATUS_OK.equals(response.getStatus());
 
-        } catch (APIException e) {
+        } catch (Exception e) {
 
             logger.error("Upload failed: " + e.getMessage());
 

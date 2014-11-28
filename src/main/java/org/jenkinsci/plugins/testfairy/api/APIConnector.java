@@ -1,14 +1,18 @@
 package org.jenkinsci.plugins.testfairy.api;
 
 
+import hudson.FilePath;
+import hudson.util.IOUtils;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import org.apache.commons.httpclient.methods.multipart.ByteArrayPartSource;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -34,9 +38,9 @@ public class APIConnector {
     }
 
 
-    public APIResponse uploadAPK() throws APIException {
+    public APIResponse uploadAPK(FilePath remoteWorkspacePath) throws APIException {
 
-        APIResponse apiResponse = sendUploadRequest();
+        APIResponse apiResponse = sendUploadRequest(remoteWorkspacePath);
 
         return apiResponse;
 
@@ -46,13 +50,13 @@ public class APIConnector {
      * Sends an upload request to the TestFairy API
      * @return
      */
-    APIResponse sendUploadRequest() throws APIException {
+    APIResponse sendUploadRequest(FilePath remoteWorkspacePath) throws APIException {
         APIResponse apiResponse = null;
 
         try {
             HttpPost httpPost = new HttpPost(apiParams.getApiURI());
 
-            httpPost.setEntity(buildMultipartRequest());
+            httpPost.setEntity(buildMultipartRequest(remoteWorkspacePath));
 
             CloseableHttpClient httpClient = HttpClientBuilder.create().build();
 
@@ -64,6 +68,8 @@ public class APIConnector {
 
         } catch (IOException ex) {
             throw new APIException(ex.getMessage(), ex);
+        } catch (InterruptedException ex) {
+            throw new APIException(ex.getMessage(), ex);            
         }
 
         return apiResponse;
@@ -73,7 +79,7 @@ public class APIConnector {
      * Builds the http multipart request to be sent to the TestFairy API
      * @return
      */
-    private HttpEntity buildMultipartRequest() {
+    private HttpEntity buildMultipartRequest(FilePath remoteWorkspacePath) throws java.io.IOException, APIException, InterruptedException {
 
         MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
 
@@ -83,12 +89,15 @@ public class APIConnector {
 
         addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_KEY, apiParams.getApiKey());
 
-        addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_FILE, apiParams.getApkFile());
+        addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_APK_FILE, createFile(remoteWorkspacePath, apiParams.getApkFilePath(), "APK"));
 
         /*
          *   Set Optional Params
          */
-        addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_PROGUARD_FILE,apiParams.getProguardFile());
+        String proguardFilePath = apiParams.getProguardFilePath();
+        if (proguardFilePath!=null && !"".equals(proguardFilePath)) {
+            addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_PROGUARD_FILE,createFile(remoteWorkspacePath, proguardFilePath, "APK"));
+        }
 
         addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_TESTERS_GROUPS, apiParams.getTestersGroups());
 
@@ -110,9 +119,9 @@ public class APIConnector {
     }
 
     private void addFilePartIfNotEmpty(MultipartEntityBuilder entityBuilder,
-                                       String requestParam, File file){
+                                       String requestParam, FilePath file) throws java.io.IOException {
         if (file != null) {
-            entityBuilder.addPart(requestParam, new FileBody(file));
+            entityBuilder.addPart(requestParam, new ByteArrayBody(IOUtils.toByteArray(file.read()), file.getName()));
         }
     }
 
@@ -123,4 +132,12 @@ public class APIConnector {
         }
     }
 
+    private FilePath createFile(FilePath remoteWorkspacePath, String filePath, String fileContext)
+            throws APIException, java.io.IOException, java.lang.InterruptedException {
+        FilePath file = new FilePath(remoteWorkspacePath, filePath);
+        if (file == null || !file.exists() || file.isDirectory()) {
+            throw new APIException("Invalid " + fileContext + " File Path: " + filePath);
+        }
+        return file;
+    }
 }

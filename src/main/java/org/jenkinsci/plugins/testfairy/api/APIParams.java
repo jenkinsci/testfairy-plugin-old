@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,8 +27,6 @@ public class APIParams {
 
     //processed params
     private URI apiURI;
-    private File apkFile;
-    private File proguardFile;
 
     public APIParams(String apiUrl, String apiKey, String apkFilePath, String proguardFilePath,
                      String testersGroups, String metrics, String maxDuration, String video,
@@ -49,8 +46,8 @@ public class APIParams {
     }
 
 
-    public void initializeAndValidate(String remoteWorkspacePath) throws
-            APIException {
+    public void initializeAndValidate() throws
+            APIException, java.io.IOException, java.lang.InterruptedException {
 
         checkNotMissing(apiUrl, "API Url");
 
@@ -65,25 +62,11 @@ public class APIParams {
         checkNotMissing(apiKey, "API Key");
 
         checkNotMissing(apkFilePath, "APK File Path");
-
-        apkFile = createFile(remoteWorkspacePath, apkFilePath, "APK");
-        if (proguardFilePath!=null && !"".equals(proguardFilePath)) {
-            proguardFile = createFile(remoteWorkspacePath, proguardFilePath, "Proguard");
-        }
     }
 
     public URI getApiURI(){
         return apiURI;
     }
-
-    public File getApkFile(){
-        return apkFile;
-    }
-
-    public File getProguardFile(){
-        return proguardFile;
-    }
-
 
     public String getApiUrl() {
         return apiUrl;
@@ -189,24 +172,4 @@ public class APIParams {
         }
     }
 
-    private File createFile(String remoteWorkspacePath, String filePath, String fileContext)
-            throws APIException {
-        File file = findAbsoluteOrRelativeFile(remoteWorkspacePath, filePath);
-        if (file == null || !file.isFile()) {
-            throw new APIException("Invalid " + fileContext + " File Path: " + filePath);
-        }
-        return file;
-    }
-
-    private File findAbsoluteOrRelativeFile(String workspace, String path) {
-        File f = new File(path);
-        if (f.exists()) {
-            return f;
-        }
-        f = new File(workspace, path);
-        if (f.exists()) {
-            return f;
-        }
-        return null;
-    }
 }
