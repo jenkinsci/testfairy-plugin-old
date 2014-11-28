@@ -119,12 +119,12 @@ public class TestFairyNotifier extends Notifier {
             } catch (Exception e) {
                 // do nothing if exception caught
             }
-            
+
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
 
-            apiParams.initializeAndValidate(build.getWorkspace());
+            apiParams.initializeAndValidate();
 
-            APIResponse response = connector.uploadAPK();
+            APIResponse response = connector.uploadAPK(build.getWorkspace());
 
             logger.logResponse(response);
 

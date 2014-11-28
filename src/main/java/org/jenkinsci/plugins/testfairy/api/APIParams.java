@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.testfairy.api;
 
-import hudson.FilePath;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,8 +27,6 @@ public class APIParams {
 
     //processed params
     private URI apiURI;
-    private FilePath apkFile;
-    private FilePath proguardFile;
 
     public APIParams(String apiUrl, String apiKey, String apkFilePath, String proguardFilePath,
                      String testersGroups, String metrics, String maxDuration, String video,
@@ -49,7 +46,7 @@ public class APIParams {
     }
 
 
-    public void initializeAndValidate(FilePath remoteWorkspacePath) throws
+    public void initializeAndValidate() throws
             APIException, java.io.IOException, java.lang.InterruptedException {
 
         checkNotMissing(apiUrl, "API Url");
@@ -65,25 +62,11 @@ public class APIParams {
         checkNotMissing(apiKey, "API Key");
 
         checkNotMissing(apkFilePath, "APK File Path");
-
-        apkFile = createFile(remoteWorkspacePath, apkFilePath, "APK");
-        if (proguardFilePath!=null && !"".equals(proguardFilePath)) {
-            proguardFile = createFile(remoteWorkspacePath, proguardFilePath, "Proguard");
-        }
     }
 
     public URI getApiURI(){
         return apiURI;
     }
-
-    public FilePath getApkFile(){
-        return apkFile;
-    }
-
-    public FilePath getProguardFile(){
-        return proguardFile;
-    }
-
 
     public String getApiUrl() {
         return apiUrl;
@@ -189,12 +172,4 @@ public class APIParams {
         }
     }
 
-    private FilePath createFile(FilePath remoteWorkspacePath, String filePath, String fileContext)
-            throws APIException, java.io.IOException, java.lang.InterruptedException {
-        FilePath file = new FilePath(remoteWorkspacePath, filePath);
-        if (file == null || file.isDirectory()) {
-            throw new APIException("Invalid " + fileContext + " File Path: " + filePath);
-        }
-        return file;
-    }
 }
