@@ -100,7 +100,7 @@ public class APIConnector {
             addFilePartIfNotEmpty(entityBuilder, REQUEST_PARAM_PROGUARD_FILE,createFile(remoteWorkspacePath, proguardFilePath, "PROGUARD"));
         }
 
-        addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_TESTERS_GROUPS, apiParams.getTestersGroups());
+        addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_TESTERS_GROUPS, environment.expand(apiParams.getTestersGroups()));
 
         addTextBodyIfNotEmpty(entityBuilder, REQUEST_PARAM_METRICS, apiParams.getMetrics());
 
