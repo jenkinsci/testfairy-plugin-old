@@ -23,7 +23,6 @@ import java.util.EnumSet;
 public class TestFairyNotifier extends Notifier {
 
     private APIParams apiParams;
-    private APIConnector connector;
 
     @Override
     public DescriptorImpl getDescriptor() {
@@ -100,15 +99,13 @@ public class TestFairyNotifier extends Notifier {
         this.apiParams = new APIParams(apiUrl, apiKey, apkFilePath, proguardFilePath,
                 testersGroups, UI2APIParamsConverter.metricsEnumSetToCSVString(metrics), maxDuration, video, videoQuality, videoRate,
                 UI2APIParamsConverter.iconWatermarkBooleanToString(iconWatermark), comment);
-
-        this.connector = new APIConnector(this.apiParams);
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)  {
 
         ConsoleLogger logger =  new ConsoleLogger(listener.getLogger());
-
+        APIConnector connector = new APIConnector(this.apiParams);
 
         try {
             logger.info("Uploading APK :" + apiParams.getApkFilePath() + " to TestFairy ...");
